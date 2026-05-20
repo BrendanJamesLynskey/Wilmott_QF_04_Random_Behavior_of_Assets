@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wilmott QF 04 &mdash; The Random Behavior of Assets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a; --bg-card: #0d1117; --bg-code: #161b22;
+            --text-primary: #e6edf3; --text-secondary: #8b949e;
+            --accent: #fbbf24; --accent-dim: #fbbf2444; --accent-glow: #fbbf2433;
+            --accent-2: #f472b6; --accent-3: #a78bfa; --accent-4: #34d399;
+            --accent-5: #60a5fa;
+            --border: #21262d;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-body: 'Inter', sans-serif;
+            --max-width: 900px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); font-size: 17px; line-height: 1.7; overflow-x: hidden; }
+        .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem 1.5rem; text-align: center; position: relative; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 700px; height: 600px; background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+        .hero > * { position: relative; z-index: 1; }
+        .series-label { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1rem; }
+        .hero h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: var(--text-primary); line-height: 1.2; margin-bottom: 1rem; }
+        .hero h1 .accent { color: var(--accent); }
+        .hero .subtitle { font-size: 1.1rem; color: var(--text-secondary); max-width: 640px; margin-bottom: 2rem; }
+        .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 2.5rem; }
+        .tag { font-family: var(--font-mono); font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); background: var(--accent-dim); white-space: nowrap; }
+        .pipeline { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.25rem; margin-bottom: 1rem; max-width: var(--max-width); }
+        .pipeline-step { font-family: var(--font-mono); font-size: 0.7rem; padding: 0.3rem 0.7rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; color: var(--text-secondary); white-space: nowrap; }
+        .pipeline-arrow { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
+        .slide { min-height: 100vh; max-width: var(--max-width); margin: 0 auto; padding: 4rem 1.5rem; position: relative; display: flex; flex-direction: column; justify-content: center; }
+        .slide-number { font-family: var(--font-display); font-size: 5rem; font-weight: 700; color: var(--accent-dim); position: absolute; top: 2rem; right: 1.5rem; line-height: 1; user-select: none; }
+        .slide h2 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; color: var(--accent); margin-bottom: 1.5rem; line-height: 1.25; }
+        .slide h3 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; color: var(--text-primary); margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .slide p { margin-bottom: 1rem; color: var(--text-secondary); }
+        .slide p strong { color: var(--text-primary); }
+        .slide ul, .slide ol { margin-bottom: 1rem; padding-left: 1.5rem; color: var(--text-secondary); }
+        .slide li { margin-bottom: 0.4rem; }
+        .slide li strong { color: var(--text-primary); }
+        .slide code { background: var(--bg-code); padding: 0.1rem 0.35rem; border-radius: 3px; font-family: var(--font-mono); font-size: 0.85em; color: var(--accent); }
+        .diagram-grid { display: grid; gap: 0.75rem; margin: 1.5rem 0; padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+        .diagram-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .diagram-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .diagram-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+        .diagram-panel { padding: 1rem; background: var(--bg-code); border: 1px solid var(--border); border-radius: 6px; }
+        .diagram-panel.accent-border { border-left: 3px solid var(--accent); }
+        .diagram-panel.r { border-left: 3px solid var(--accent-2); }
+        .diagram-panel.p { border-left: 3px solid var(--accent-3); }
+        .diagram-panel.g { border-left: 3px solid var(--accent-4); }
+        .diagram-panel.b { border-left: 3px solid var(--accent-5); }
+        .diagram-panel h4 { font-family: var(--font-display); font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem; }
+        .diagram-panel.r h4 { color: var(--accent-2); }
+        .diagram-panel.p h4 { color: var(--accent-3); }
+        .diagram-panel.g h4 { color: var(--accent-4); }
+        .diagram-panel.b h4 { color: var(--accent-5); }
+        .diagram-panel p, .diagram-panel ul { font-size: 0.9rem; }
+        .callout { background: var(--bg-card); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+        .callout p { margin-bottom: 0; }
+        .callout .callout-label { font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+        .quote { font-family: var(--font-display); font-size: 1.1rem; font-style: italic; color: var(--text-primary); padding: 1rem 1.5rem; border-left: 3px solid var(--accent); background: var(--bg-card); margin: 1.25rem 0; border-radius: 0 8px 8px 0; }
+        .quote .attr { display: block; margin-top: 0.5rem; font-style: normal; font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono); }
+        .canvas-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin: 1.25rem 0; overflow-x: auto; }
+        .canvas-wrap canvas, .canvas-wrap svg { display: block; margin: 0 auto; max-width: 100%; }
+        .control-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin: 1.25rem 0; }
+        .control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .control-row label { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); min-width: 160px; }
+        .control-row input[type="range"] { flex: 1; min-width: 150px; accent-color: var(--accent); }
+        .control-row select, .control-row input[type="number"] { background: var(--bg-code); border: 1px solid var(--border); color: var(--text-primary); border-radius: 4px; padding: 0.3rem 0.5rem; font-family: var(--font-mono); font-size: 0.8rem; }
+        .control-row .val { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); min-width: 80px; text-align: right; }
+        .btn { font-family: var(--font-mono); font-size: 0.8rem; padding: 0.4rem 0.9rem; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; cursor: pointer; transition: background 0.15s ease; }
+        .btn:hover { background: rgba(251,191,36,0.25); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn.secondary { background: var(--bg-code); color: var(--text-secondary); border-color: var(--border); }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
+        .metric { background: var(--bg-code); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; text-align: center; }
+        .metric .metric-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
+        .metric .metric-value { font-family: var(--font-display); font-size: 1.25rem; color: var(--accent); font-weight: 600; margin-top: 0.2rem; }
+        .contents-list { list-style: none; padding-left: 0; counter-reset: contents; }
+        .contents-list li { counter-increment: contents; padding: 0.6rem 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .contents-list li:last-child { border-bottom: none; }
+        .contents-list li::before { content: counter(contents, decimal-leading-zero); font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); min-width: 2rem; }
+        .contents-list a { color: var(--text-primary); text-decoration: none; }
+        .contents-list a:hover { color: var(--accent); }
+        .footer { text-align: center; padding: 3rem 1.5rem; color: var(--text-secondary); font-size: 0.85rem; border-top: 1px solid var(--border); max-width: var(--max-width); margin: 0 auto; }
+        .footer a { color: var(--accent); text-decoration: none; }
+        .katex { color: var(--text-primary); }
+        .katex-display { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0; }
+        th { background: var(--bg-code); color: var(--accent); font-weight: 600; text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border); font-family: var(--font-display); }
+        td { padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) td { background: rgba(13, 17, 23, 0.5); }
+        @media (max-width: 640px) {
+            .slide { padding: 3rem 1rem; min-height: auto; }
+            .slide-number { font-size: 3rem; top: 1.5rem; right: 1rem; }
+            .slide h2 { font-size: 1.5rem; }
+            .diagram-grid.cols-2, .diagram-grid.cols-3, .diagram-grid.cols-4 { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="series-label">Paul Wilmott Introduces Quantitative Finance &mdash; Deck 04</div>
+    <h1>The Random Behavior <span class="accent">of Assets</span></h1>
+    <p class="subtitle">From a discrete spreadsheet random walk to the Wiener process and geometric Brownian motion &mdash; the continuous-time model on which the rest of the book is built.</p>
+
+    <div class="tags">
+        <span class="tag">returns</span><span class="tag">drift</span>
+        <span class="tag">volatility</span><span class="tag">Jensen</span>
+        <span class="tag">random walk</span><span class="tag">Wiener</span>
+        <span class="tag">GBM</span><span class="tag">lognormal</span>
+    </div>
+
+    <div class="pipeline">
+        <span class="pipeline-step">returns $R_i$</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">$\mu, \sigma$</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">$\delta S = \mu S\delta t + \sigma S\phi\sqrt{\delta t}$</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">$dW_t$</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">$dS = \mu S\,dt + \sigma S\,dW$</span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>Topics We'll Cover</h2>
+    <ul class="contents-list">
+        <li><a href="#slide-01">Why a model for randomness &mdash; Jensen's inequality</a></li>
+        <li><a href="#slide-02">Examining returns &mdash; the empirical distribution</a></li>
+        <li><a href="#slide-03">Timescales &mdash; how $\mu$ and $\sigma$ scale with $\delta t$</a></li>
+        <li><a href="#slide-04">The drift $\mu$</a></li>
+        <li><a href="#slide-05">The volatility $\sigma$</a></li>
+        <li><a href="#slide-06">Estimating volatility from data</a></li>
+        <li><a href="#slide-07">The random walk on a spreadsheet</a></li>
+        <li><a href="#slide-08">The Wiener process $W_t$</a></li>
+        <li><a href="#slide-09">The accepted model: $dS = \mu S\,dt + \sigma S\,dW$</a></li>
+        <li><a href="#slide-10">Interactive: GBM path simulator</a></li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>Why a Model for Randomness</h2>
+    <p>Decks 02 and 03 priced contracts by assuming we knew the distribution of the underlying. Until we write down such a distribution, we have nothing to plug into the binomial recursion or any continuous-time analogue. This chapter does that: it gives the standard model for the random behaviour of a share price.</p>
+
+    <div class="quote">
+        <p>"Asset prices are random. To price contracts that depend on them, we need a model for that randomness."</p>
+        <span class="attr">&mdash; Wilmott, Ch. 4</span>
+    </div>
+
+    <h3>Jensen's inequality &mdash; the reason "expected payoff" isn't the answer</h3>
+    <p>For a convex function $f$ (such as a call payoff $\max(S-K,0)$),</p>
+    <p>$$\mathbb{E}[f(S)] \;\ge\; f(\mathbb{E}[S]),$$</p>
+    <p>with strict inequality whenever $S$ is genuinely random. So <em>the expected payoff is not the payoff of the expectation</em>. Pricing a non-linear payoff requires you to know the entire distribution of $S_T$, not just its mean.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel g">
+            <h4>Linear payoff</h4>
+            <p>For a forward, the payoff is $S_T - F$ &mdash; linear in $S_T$. Pricing only needs the mean of $S_T$, which is fixed by no-arbitrage. No model required.</p>
+        </div>
+        <div class="diagram-panel r">
+            <h4>Convex payoff</h4>
+            <p>For a call, $f(S_T) = (S_T - K)^+$ is convex &mdash; more upside than downside. The more spread out $S_T$ is, the higher the expected payoff. <strong>Volatility itself becomes a price input.</strong></p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Why options are interesting</div>
+        <p>Forwards depend only on $\mathbb{E}[S_T]$. Options depend on the whole distribution. That is why the rest of this book is about modelling the dynamics of $S_t$ &mdash; not just predicting its end value.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>Examining Returns</h2>
+    <p>Don't model $S_t$ directly &mdash; model its <em>returns</em>. Over a small interval $[t, t+\delta t]$, the return is</p>
+    <p>$$R = \frac{S_{t+\delta t} - S_t}{S_t} = \frac{\delta S}{S}.$$</p>
+
+    <p>Equivalently, in log form, the log-return is $\log(S_{t+\delta t}/S_t) \approx R - R^2/2$. For small $\delta t$ both are nearly identical and the choice is conventional.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>Stylised facts</h4>
+            <ul>
+                <li>Daily returns of liquid equities have mean $\approx 0$ and standard deviation $\approx 1$&ndash;$2\%$.</li>
+                <li>Histograms look roughly bell-shaped &mdash; the standard model takes them to be Gaussian.</li>
+                <li>Volatility itself varies over time (clustering): the Gaussian assumption is approximate.</li>
+                <li>Tails are fatter than Gaussian; large moves more common than $\mathcal{N}(0,1)$ predicts. Stochastic-volatility and jump models (Deck 08+) address this.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel b">
+            <h4>The standard assumption</h4>
+            <p>Returns are <em>independent and identically distributed</em>, and Normally distributed:</p>
+            <p>$$\frac{\delta S}{S} \sim \mathcal{N}(\mu\,\delta t,\; \sigma^2\, \delta t).$$</p>
+            <p>This single assumption is the whole content of the next several chapters.</p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Why Normal?</div>
+        <p>If a return over $[0,T]$ is the sum of $N$ small iid returns over $[t, t+T/N]$, then by the central limit theorem the total return is approximately Gaussian as $N \to \infty$. Independence + finite variance forces a bell shape.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>Timescales</h2>
+    <p>How should the parameters of the return distribution scale with $\delta t$? Two answers, both forced by the iid-sum structure.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel g">
+            <h4>Mean (drift) scales linearly</h4>
+            <p>If returns over disjoint intervals are independent with mean $\mu\, \delta t$, the mean over $T$ is $\mu T$. Drift is additive in time.</p>
+            <p>$$\mathbb{E}\!\left[\frac{\delta S}{S}\right] = \mu\, \delta t.$$</p>
+        </div>
+        <div class="diagram-panel p">
+            <h4>Variance scales linearly &mdash; <em>std</em> scales with $\sqrt{\delta t}$</h4>
+            <p>Variances of independent sums add. So $\mathrm{Var}(R_T) = \sigma^2 T$ and</p>
+            <p>$$\mathrm{std}\!\left(\frac{\delta S}{S}\right) = \sigma\, \sqrt{\delta t}.$$</p>
+        </div>
+    </div>
+
+    <h3>The discrete return model</h3>
+    <p>Combine the two:</p>
+    <p>$$\frac{\delta S}{S} = \mu\, \delta t + \sigma\, \phi\, \sqrt{\delta t},\qquad \phi \sim \mathcal{N}(0,1).$$</p>
+
+    <p>This is the formula you put in a spreadsheet (slide 07) and the discrete prototype of the continuous SDE (slide 09).</p>
+
+    <div class="callout">
+        <div class="callout-label">Why $\sqrt{\delta t}$ matters</div>
+        <p>Over short timescales the random term $\sigma\phi\sqrt{\delta t}$ dominates the deterministic term $\mu\delta t$, because $\sqrt{\delta t} \gg \delta t$ as $\delta t \to 0$. <strong>Randomness wins on short horizons.</strong> Over long horizons the linear drift catches up.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>The Drift $\mu$</h2>
+    <p>$\mu$ is the expected return per unit time. For equities it is broadly positive (long-run equity premium); it varies by asset class and over time. Typical equity $\mu \approx 5$&ndash;$10\%$/year (nominal).</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>Estimating $\mu$ is hard</h4>
+            <p>To pin $\mu$ down to within $\pm 1\%$/year you need decades of data &mdash; and by then $\mu$ has changed. The "expected return" is the least-well-known parameter in finance.</p>
+            <p>Estimator: $\hat\mu = \frac{1}{T}\sum R_i$ on disjoint windows of length $\delta t$, then $\hat\mu / \delta t$.</p>
+        </div>
+        <div class="diagram-panel g">
+            <h4>The astonishing thing</h4>
+            <p>Black&ndash;Scholes pricing does not need $\mu$. The hedging argument of Deck 03 made the real probability $p$ irrelevant; in the continuous limit it makes $\mu$ irrelevant in the same way. <strong>Option prices depend on $\sigma$, not on $\mu$.</strong></p>
+        </div>
+    </div>
+
+    <p>For a forward (Deck 01) we already knew $\mathbb{E}[S_T] = S_0 e^{rT}$ under the risk-neutral measure, not $S_0 e^{\mu T}$. The same will be true here: the relevant drift for pricing is $r$, the riskless rate, not the actual drift $\mu$. We need $\mu$ only to simulate the real-world distribution.</p>
+
+    <div class="callout">
+        <div class="callout-label">Practitioner's view</div>
+        <p>For risk (VaR, P&amp;L attribution, scenario analysis) you need $\mu$. For pricing, you can ignore it. This is why a pure pricing desk talks almost exclusively about volatility surfaces, never about expected returns.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>The Volatility $\sigma$</h2>
+    <p>$\sigma$ measures the uncertainty about the return per unit time. It has units of $1/\sqrt{\text{time}}$ &mdash; typically annualised, with the convention that "20% vol" means $\sigma = 0.20\,\text{yr}^{-1/2}$.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel p">
+            <h4>Time conversions</h4>
+            <p>To convert across timescales (assuming iid increments):</p>
+            <p>$$\sigma_T = \sigma_1 \sqrt{T}.$$</p>
+            <p>Daily vol (252 trading days) $\approx$ annual vol $/\sqrt{252}$ $\approx$ annual vol $/15.87$.</p>
+        </div>
+        <div class="diagram-panel b">
+            <h4>Order of magnitude</h4>
+            <table style="margin:0;font-size:0.85rem;">
+                <tr><td>Equities, large-cap</td><td>15&ndash;25%</td></tr>
+                <tr><td>Single stocks, biotech</td><td>40&ndash;80%</td></tr>
+                <tr><td>FX, G10 pairs</td><td>6&ndash;12%</td></tr>
+                <tr><td>Interest rates (short)</td><td>0.5&ndash;2% (abs)</td></tr>
+                <tr><td>Crude oil</td><td>30&ndash;60%</td></tr>
+                <tr><td>VIX itself</td><td>~80%</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <h3>Volatility is the price input</h3>
+    <p>Because pricing doesn't see $\mu$, $\sigma$ is the input that <em>does</em> matter, and it is hard to measure. Two flavours:</p>
+    <ul>
+        <li><strong>Historical (realised) volatility:</strong> computed from past returns.</li>
+        <li><strong>Implied volatility:</strong> the $\sigma$ that, plugged into Black&ndash;Scholes, reproduces the market option price. The whole later book is about how the implied surface deviates from a flat $\sigma$.</li>
+    </ul>
+
+    <div class="callout">
+        <div class="callout-label">The vol skew, in one line</div>
+        <p>If returns really were $\mathcal{N}(\mu \delta t, \sigma^2 \delta t)$ with constant $\sigma$, implied vol would be the same number for every strike. It isn't &mdash; Deck 08.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>Estimating Volatility from Data</h2>
+    <p>Given daily closes $S_0, S_1, \ldots, S_n$, the standard estimator of annualised volatility is the <strong>sample standard deviation of log-returns</strong>:</p>
+    <p>$$r_i = \log\!\frac{S_i}{S_{i-1}},\qquad \hat\sigma_{\text{daily}} = \sqrt{\frac{1}{n-1}\sum_{i=1}^n (r_i - \bar r)^2}.$$</p>
+    <p>$$\hat\sigma_{\text{annual}} = \hat\sigma_{\text{daily}}\, \sqrt{252}.$$</p>
+
+    <h3>Why log-returns?</h3>
+    <ul>
+        <li><strong>Time-additive.</strong> $\log(S_T/S_0) = \sum_i \log(S_i/S_{i-1})$, so multi-step variances add cleanly.</li>
+        <li><strong>Symmetric.</strong> A $+50\%$ move followed by a $-33\%$ move returns you to the start. Log-returns are symmetric around zero.</li>
+        <li><strong>Matches the model.</strong> Geometric Brownian motion has Gaussian log-returns, not Gaussian raw returns.</li>
+    </ul>
+
+    <h3>Caveats</h3>
+    <table>
+        <thead><tr><th>Issue</th><th>Effect</th></tr></thead>
+        <tbody>
+            <tr><td>Vol clusters</td><td>Recent windows mis-estimate future vol after a regime change.</td></tr>
+            <tr><td>Choice of window</td><td>Short window = noisy estimate; long window = stale.</td></tr>
+            <tr><td>Open-close vs intraday</td><td>Close-to-close ignores overnight gaps; high-frequency improves the estimate at the cost of microstructure noise.</td></tr>
+            <tr><td>EWMA / GARCH</td><td>Down-weight old data exponentially &mdash; standard for risk management.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout">
+        <div class="callout-label">Historic vs implied</div>
+        <p>Historic vol tells you what already happened. Implied vol tells you what the market thinks will happen. They are routinely different &mdash; the gap is itself a tradable spread (variance swaps, Deck 08).</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>The Random Walk on a Spreadsheet</h2>
+    <p>The discrete return model</p>
+    <p>$$\delta S = \mu S\, \delta t + \sigma S\, \phi\, \sqrt{\delta t},\qquad \phi \sim \mathcal{N}(0,1)$$</p>
+    <p>can be implemented in fewer than five spreadsheet cells. This is Wilmott's "random walk on a spreadsheet" &mdash; the most useful sanity check in the book.</p>
+
+    <h3>Algorithm</h3>
+    <ol>
+        <li>Pick parameters $S_0, \mu, \sigma, T, N$. Set $\delta t = T/N$.</li>
+        <li>For each step $i = 1, \ldots, N$: draw $\phi_i \sim \mathcal{N}(0,1)$ (e.g. <code>=NORM.S.INV(RAND())</code>).</li>
+        <li>Update: $S_i = S_{i-1} + \mu S_{i-1} \delta t + \sigma S_{i-1} \phi_i \sqrt{\delta t}$.</li>
+        <li>Plot the column $S_i$ against $t_i = i\,\delta t$.</li>
+    </ol>
+
+    <h3>What you see</h3>
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel g">
+            <h4>Single path</h4>
+            <p>Jagged, scale-free, locally noisy. Recalculate $F9$ in Excel and the entire path changes &mdash; you've just drawn a fresh sample.</p>
+        </div>
+        <div class="diagram-panel b">
+            <h4>Many paths</h4>
+            <p>Overlay 100 paths and you get a "cone" widening like $\sqrt{t}$. The terminal distribution is approximately lognormal &mdash; positive skew, fat right tail.</p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">A subtle bug</div>
+        <p>If you use $S_i = S_{i-1}(1 + \mu\delta t + \sigma\phi\sqrt{\delta t})$ the price can go negative when $\phi$ is very negative. The fix used in continuous time is the multiplicative form $S_i = S_{i-1} \exp((\mu - \tfrac12 \sigma^2)\delta t + \sigma\phi\sqrt{\delta t})$, which guarantees $S > 0$ and is exact for GBM.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>The Wiener Process $W_t$</h2>
+    <p>Take $\delta t \to 0$ in the discrete model. The random part $\sigma\phi\sqrt{\delta t}$ becomes $\sigma\, dW_t$ where $dW_t$ is the increment of a <strong>Wiener process</strong> (a.k.a. standard Brownian motion).</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>Defining properties</h4>
+            <ul>
+                <li>$W_0 = 0$.</li>
+                <li>Increments $W_{t+s} - W_t$ are independent of $\mathcal{F}_t$.</li>
+                <li>$W_{t+s} - W_t \sim \mathcal{N}(0, s)$.</li>
+                <li>$t \mapsto W_t$ is continuous (almost surely).</li>
+            </ul>
+        </div>
+        <div class="diagram-panel r">
+            <h4>Counterintuitive properties</h4>
+            <ul>
+                <li>Continuous but nowhere differentiable.</li>
+                <li>Infinite total variation on any interval.</li>
+                <li><strong>Finite quadratic variation</strong>: $(dW)^2 = dt$ &mdash; the secret of Itô calculus (Deck 05).</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Heuristic</h3>
+    <p>Treat $dW$ as a random variable of size $\sqrt{dt}$:</p>
+    <p>$$dW_t \approx \phi\, \sqrt{dt},\quad \phi \sim \mathcal{N}(0,1),$$</p>
+    <p>independent for non-overlapping intervals. Then $(dW)^2 = \phi^2 dt$ has mean $dt$, variance $2(dt)^2$. The mean term survives to leading order; the variance is lower order. In the limit $(dW)^2 = dt$, exactly &mdash; not as a random variable but as a deterministic identity in stochastic calculus.</p>
+
+    <div class="callout">
+        <div class="callout-label">Looking ahead</div>
+        <p>The identity $(dW)^2 = dt$ is what creates Itô's lemma in Deck 05 &mdash; an extra $\tfrac12 \sigma^2 S^2 \partial^2/\partial S^2$ term that has no analogue in ordinary calculus. It is the entire reason Black&ndash;Scholes contains a $\tfrac12 \sigma^2$ rather than the naive zero.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>The Accepted Model: $dS = \mu S\,dt + \sigma S\,dW$</h2>
+    <p>Putting everything together, the standard continuous-time model for an asset price is</p>
+    <p>$$\boxed{\;dS_t \;=\; \mu\, S_t\, dt \;+\; \sigma\, S_t\, dW_t.\;}$$</p>
+
+    <p>This is <strong>geometric Brownian motion</strong> (GBM). It is the workhorse for the rest of the book.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel g">
+            <h4>Why proportional, $\sigma S$ and not $\sigma$?</h4>
+            <p>A 1% move in a £100 stock and in a £1,000 stock should both be "1% moves." The natural noise is multiplicative, not additive. Empirically, the SD of returns is roughly stable across price levels &mdash; not the SD of price changes.</p>
+            <p>Also: a multiplicative process can't go negative.</p>
+        </div>
+        <div class="diagram-panel p">
+            <h4>The solution: lognormal $S_T$</h4>
+            <p>Applying Itô's lemma to $\log S$ (Deck 05) gives</p>
+            <p>$$\log S_T = \log S_0 + (\mu - \tfrac12 \sigma^2)T + \sigma W_T,$$</p>
+            <p>so $\log S_T \sim \mathcal{N}\bigl(\log S_0 + (\mu - \tfrac12\sigma^2)T,\; \sigma^2 T\bigr)$ &mdash; $S_T$ is lognormal.</p>
+        </div>
+    </div>
+
+    <h3>Moments under GBM</h3>
+    <p>$$\mathbb{E}[S_T] = S_0\, e^{\mu T},\qquad \mathrm{Var}(S_T) = S_0^2\, e^{2\mu T}\bigl(e^{\sigma^2 T} - 1\bigr).$$</p>
+
+    <div class="callout">
+        <div class="callout-label">What the model says &mdash; and what it doesn't</div>
+        <p>GBM says: log-returns are Gaussian, vol is constant, no jumps, no fat tails. It is good enough for a first pass and for closed-form pricing (Black&ndash;Scholes, Deck 06) but the next several decks chip away at each assumption: stochastic vol, jumps, regime-switching, and the volatility surface. The model is the start of the story, not the end.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-10">
+    <div class="slide-number">10</div>
+    <h2>Interactive: GBM Path Simulator</h2>
+    <p>Drag the sliders to set $S_0, \mu, \sigma, T, N$. The left panel plots ~50 sample GBM paths; the right panel shows the histogram of terminal $S_T$ with the theoretical lognormal density overlaid. Hit <em>Resample</em> to draw a fresh set.</p>
+
+    <div class="canvas-wrap">
+        <canvas id="gbm-canvas" width="780" height="340"></canvas>
+    </div>
+
+    <div class="control-panel">
+        <div class="control-row">
+            <label for="g-s">$S_0$</label>
+            <input type="range" id="g-s" min="10" max="200" step="1" value="100">
+            <span class="val" id="g-s-v">100.00</span>
+        </div>
+        <div class="control-row">
+            <label for="g-mu">Drift $\mu$ (%/yr)</label>
+            <input type="range" id="g-mu" min="-20" max="40" step="0.5" value="8">
+            <span class="val" id="g-mu-v">8.0%</span>
+        </div>
+        <div class="control-row">
+            <label for="g-sig">Vol $\sigma$ (%/yr)</label>
+            <input type="range" id="g-sig" min="5" max="80" step="0.5" value="25">
+            <span class="val" id="g-sig-v">25.0%</span>
+        </div>
+        <div class="control-row">
+            <label for="g-t">Horizon $T$ (yrs)</label>
+            <input type="range" id="g-t" min="0.25" max="5" step="0.05" value="1">
+            <span class="val" id="g-t-v">1.00</span>
+        </div>
+        <div class="control-row">
+            <label for="g-n">Steps $N$</label>
+            <input type="range" id="g-n" min="20" max="500" step="10" value="200">
+            <span class="val" id="g-n-v">200</span>
+        </div>
+        <div class="control-row">
+            <button class="btn" id="g-resample">resample paths</button>
+        </div>
+        <div class="metric-grid">
+            <div class="metric"><div class="metric-label">Paths</div><div class="metric-value" id="m-paths">50</div></div>
+            <div class="metric"><div class="metric-label">Empirical $\bar S_T$</div><div class="metric-value" id="m-em-mean">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">Theoretical $S_0 e^{\mu T}$</div><div class="metric-value" id="m-th-mean">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">Empirical std</div><div class="metric-value" id="m-em-std">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">Theoretical std</div><div class="metric-value" id="m-th-std">&mdash;</div></div>
+        </div>
+    </div>
+
+    <p>Push the vol up and the paths fan out; push $T$ out and the lognormal skew becomes obvious. Notice the empirical mean and theoretical $S_0 e^{\mu T}$ agree only on average &mdash; with $50$ paths there's noise. That noise is what Monte Carlo pricing has to fight.</p>
+</section>
+
+<footer class="footer">
+    <p>Deck 04 of the <a href="https://github.com/BrendanJamesLynskey/Wilmott_QF_Hub">Paul Wilmott Introduces Quantitative Finance &mdash; Companion Series</a>.</p>
+    <p style="margin-top: 0.6rem;">Companion to chapter 4 of <em>Paul Wilmott Introduces Quantitative Finance</em>, 2nd edition (Wiley, 2007).</p>
+</footer>
+
+<script>
+// ===== Slide 10: GBM path simulator =====
+(function() {
+    const $ = id => document.getElementById(id);
+    const canvas = $('gbm-canvas'), ctx = canvas.getContext('2d');
+
+    const sS = $('g-s'), sMu = $('g-mu'), sSig = $('g-sig'), sT = $('g-t'), sN = $('g-n');
+    const vS = $('g-s-v'), vMu = $('g-mu-v'), vSig = $('g-sig-v'), vT = $('g-t-v'), vN = $('g-n-v');
+
+    const NPATHS = 50;
+    let storedNormals = null; // [path][step] of N(0,1) draws
+
+    function regenerateNormals() {
+        const N = +sN.value;
+        storedNormals = [];
+        for (let p = 0; p < NPATHS; p++) {
+            const row = new Float64Array(N);
+            for (let i = 0; i < N; i++) {
+                // Box-Muller
+                let u1 = Math.random(); if (u1 < 1e-12) u1 = 1e-12;
+                let u2 = Math.random();
+                row[i] = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            }
+            storedNormals.push(row);
+        }
+    }
+
+    function ensureNormals() {
+        if (!storedNormals || storedNormals[0].length !== +sN.value) regenerateNormals();
+    }
+
+    function simulate() {
+        ensureNormals();
+        const S0 = +sS.value;
+        const mu = +sMu.value / 100;
+        const sig = +sSig.value / 100;
+        const T = +sT.value;
+        const N = +sN.value;
+        const dt = T / N;
+        const drift = (mu - 0.5 * sig * sig) * dt;
+        const diff  = sig * Math.sqrt(dt);
+
+        const paths = [];
+        for (let p = 0; p < NPATHS; p++) {
+            const path = new Float64Array(N + 1);
+            path[0] = S0;
+            const norm = storedNormals[p];
+            for (let i = 0; i < N; i++) {
+                path[i+1] = path[i] * Math.exp(drift + diff * norm[i]);
+            }
+            paths.push(path);
+        }
+        return { paths, S0, mu, sig, T, N };
+    }
+
+    function lognormPdf(x, m, s) {
+        if (x <= 0) return 0;
+        return Math.exp(-Math.pow(Math.log(x) - m, 2) / (2 * s * s)) / (x * s * Math.sqrt(2 * Math.PI));
+    }
+
+    function draw() {
+        // readouts
+        vS.textContent = (+sS.value).toFixed(2);
+        vMu.textContent = (+sMu.value).toFixed(1) + '%';
+        vSig.textContent = (+sSig.value).toFixed(1) + '%';
+        vT.textContent = (+sT.value).toFixed(2);
+        vN.textContent = sN.value;
+
+        const { paths, S0, mu, sig, T, N } = simulate();
+
+        const W = canvas.width, H = canvas.height;
+        const padT = 25, padB = 40;
+        const leftW = 460, rightW = W - leftW - 20;
+        const padL = 50, padM = leftW;
+        const plotH = H - padT - padB;
+        ctx.clearRect(0, 0, W, H);
+
+        // find global y range over paths
+        let smin = S0, smax = S0;
+        paths.forEach(p => p.forEach(v => { if (v < smin) smin = v; if (v > smax) smax = v; }));
+        const yPad = 0.05 * (smax - smin || 1);
+        smin -= yPad; smax += yPad;
+        smin = Math.max(0, smin);
+
+        // === LEFT: paths ===
+        const lx0 = padL, ly0 = padT;
+        const lw = leftW - padL - 20, lh = plotH;
+        const x2px = t => lx0 + t / T * lw;
+        const y2px = s => ly0 + lh - (s - smin) / (smax - smin) * lh;
+
+        // grid
+        ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+        for (let i = 0; i <= 5; i++) {
+            const x = lx0 + i/5 * lw;
+            ctx.beginPath(); ctx.moveTo(x, ly0); ctx.lineTo(x, ly0 + lh); ctx.stroke();
+        }
+        for (let i = 0; i <= 5; i++) {
+            const y = ly0 + i/5 * lh;
+            ctx.beginPath(); ctx.moveTo(lx0, y); ctx.lineTo(lx0 + lw, y); ctx.stroke();
+        }
+        // frame
+        ctx.strokeStyle = '#3a4252'; ctx.lineWidth = 1.2;
+        ctx.strokeRect(lx0, ly0, lw, lh);
+
+        // theoretical mean S0 e^{mu t}
+        ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.setLineDash([6,4]);
+        ctx.beginPath();
+        for (let i = 0; i <= N; i++) {
+            const t = i / N * T;
+            const m = S0 * Math.exp(mu * t);
+            const x = x2px(t), y = y2px(m);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke(); ctx.setLineDash([]);
+
+        // paths
+        const colors = ['rgba(96,165,250,0.45)','rgba(167,139,250,0.45)','rgba(52,211,153,0.45)','rgba(244,114,182,0.45)'];
+        paths.forEach((p, idx) => {
+            ctx.strokeStyle = colors[idx % colors.length];
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i <= N; i++) {
+                const t = i / N * T;
+                const x = x2px(t), y = y2px(p[i]);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        });
+
+        // labels
+        ctx.fillStyle = '#8b949e'; ctx.font = '10px JetBrains Mono';
+        ctx.fillText('t', lx0 + lw - 8, ly0 + lh + 16);
+        ctx.fillText('S_t', lx0 - 36, ly0 + 10);
+        ctx.fillText('0', lx0 - 8, ly0 + lh + 16);
+        ctx.fillText(T.toFixed(2), lx0 + lw - 22, ly0 + lh + 16);
+        ctx.fillText(smin.toFixed(0), 6, ly0 + lh - 2);
+        ctx.fillText(smax.toFixed(0), 6, ly0 + 10);
+        ctx.fillStyle = '#fbbf24'; ctx.fillText('— S₀e^(μt)', lx0 + 8, ly0 + 14);
+        ctx.fillStyle = '#8b949e'; ctx.fillText(NPATHS + ' GBM paths', lx0 + 8, ly0 + 28);
+
+        // === RIGHT: histogram of S_T ===
+        const rx0 = padM + 10, rw = rightW;
+        ctx.strokeStyle = '#3a4252'; ctx.lineWidth = 1.2;
+        ctx.strokeRect(rx0, ly0, rw, lh);
+
+        const terms = paths.map(p => p[N]);
+        terms.sort((a,b) => a-b);
+        const tMin = Math.max(0, terms[0] - 0.05*(terms[terms.length-1] - terms[0]));
+        const tMax = terms[terms.length-1] + 0.05*(terms[terms.length-1] - terms[0]);
+        const nBins = 18;
+        const binW = (tMax - tMin) / nBins;
+        const bins = new Array(nBins).fill(0);
+        terms.forEach(t => {
+            let b = Math.floor((t - tMin) / binW);
+            if (b < 0) b = 0; if (b >= nBins) b = nBins - 1;
+            bins[b]++;
+        });
+        const maxBinDensity = Math.max(...bins) / (terms.length * binW);
+
+        // theoretical lognormal mean/std for log S_T
+        const mLog = Math.log(Math.max(S0, 1e-9)) + (mu - 0.5 * sig * sig) * T;
+        const sLog = sig * Math.sqrt(T);
+
+        // overlay PDF
+        const pdfPts = [];
+        let pdfMax = 0;
+        for (let i = 0; i <= 200; i++) {
+            const x = tMin + i/200 * (tMax - tMin);
+            const f = lognormPdf(x, mLog, sLog);
+            pdfPts.push({ x, f });
+            if (f > pdfMax) pdfMax = f;
+        }
+        const yMax = Math.max(maxBinDensity, pdfMax) * 1.1;
+        const rx2px = s => rx0 + (s - tMin) / (tMax - tMin) * rw;
+        const ry2px = f => ly0 + lh - f / yMax * lh;
+
+        // bars
+        ctx.fillStyle = 'rgba(96,165,250,0.45)';
+        for (let i = 0; i < nBins; i++) {
+            const density = bins[i] / (terms.length * binW);
+            const bx = rx0 + i / nBins * rw;
+            const bw = rw / nBins - 1;
+            const by = ry2px(density);
+            const bh = ly0 + lh - by;
+            ctx.fillRect(bx, by, bw, bh);
+        }
+        // pdf curve
+        ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < pdfPts.length; i++) {
+            const x = rx2px(pdfPts[i].x), y = ry2px(pdfPts[i].f);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // tick labels
+        ctx.fillStyle = '#8b949e';
+        ctx.fillText(tMin.toFixed(0), rx0 - 4, ly0 + lh + 16);
+        ctx.fillText(tMax.toFixed(0), rx0 + rw - 20, ly0 + lh + 16);
+        ctx.fillText('S_T', rx0 + rw - 18, ly0 + 12);
+        ctx.fillStyle = '#fbbf24'; ctx.fillText('— lognormal pdf', rx0 + 8, ly0 + 14);
+        ctx.fillStyle = 'rgba(96,165,250,0.85)'; ctx.fillText('■ empirical S_T', rx0 + 8, ly0 + 28);
+
+        // metrics
+        const empMean = terms.reduce((a,b)=>a+b,0) / terms.length;
+        const empStd  = Math.sqrt(terms.reduce((a,b)=>a + (b-empMean)*(b-empMean), 0) / Math.max(terms.length - 1, 1));
+        const thMean  = S0 * Math.exp(mu * T);
+        const thStd   = S0 * Math.exp(mu * T) * Math.sqrt(Math.exp(sig*sig*T) - 1);
+
+        $('m-em-mean').textContent = empMean.toFixed(2);
+        $('m-th-mean').textContent = thMean.toFixed(2);
+        $('m-em-std').textContent  = empStd.toFixed(2);
+        $('m-th-std').textContent  = thStd.toFixed(2);
+        $('m-paths').textContent   = NPATHS.toString();
+    }
+
+    [sS, sMu, sSig, sT].forEach(el => el.addEventListener('input', draw));
+    sN.addEventListener('input', () => { regenerateNormals(); draw(); });
+    $('g-resample').addEventListener('click', () => { regenerateNormals(); draw(); });
+
+    regenerateNormals();
+    draw();
+})();
+</script>
+</body>
+</html>
